@@ -1,0 +1,51 @@
+---
+  - name: Deploy Nginx Web Server
+    hosts: webservers
+    become: yes
+  
+    vars:
+      nginx_port: 8080
+      server_name: example.com
+      root_dir: /var/www/html
+  
+    defaults:
+      nginx_package: nginx
+      config_path: /etc/nginx/conf.d/custom.conf
+      index_file: index.html
+  
+    tasks:
+      - name: Install Nginx
+        apt:
+          name: "{{ nginx_package }}"
+          state: present
+        notify: Restart Nginx
+  
+      - name: Ensure web root exists
+        file:
+          path: "{{ root_dir }}"
+          state: directory
+          owner: www-data
+          group: www-data
+          mode: '0755'
+  
+      - name: Deploy index.html
+        copy:
+          src: files/{{ index_file }}
+          dest: "{{ root_dir }}/{{ index_file }}"
+          owner: www-data
+          group: www-data
+          mode: '0644'
+  
+      - name: Deploy Nginx custom configuration
+        template:
+          src: templates/custom.conf.j2
+          dest: "{{ config_path }}"
+          mode: '0644'
+        notify: Restart Nginx
+  
+    handlers:
+      - name: Restart Nginx
+        service:
+          name: nginx
+          state: restarted
+  
